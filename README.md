@@ -1,3 +1,8 @@
+> **Org Status**: 🟢 Active
+> **Cloudflare**: N/A
+> **Last Audited**: 2026-04-28
+---
+
 # @apimom/client
 
 TypeScript client SDK for [API Mom](https://github.com/garywu/api-mom) — unified egress for Cloudflare Workers.
