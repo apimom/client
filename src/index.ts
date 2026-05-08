@@ -21,12 +21,21 @@ export interface ApiMomEnv {
   API_MOM?: Fetcher;
 }
 
+export interface ApiMomInterceptor {
+  /** Return true to intercept this request */
+  match: (service: string, endpoint: string, init: RequestInit) => boolean;
+  /** Execute the request locally/custom and return the standard ApiMomResponse */
+  handle: (service: string, endpoint: string, init: RequestInit) => Promise<ApiMomResponse>;
+}
+
 export interface ApiMomConfig {
   url: string;
   key: string;
   project: string;
   /** Service binding for Worker-to-Worker (avoids CF 1042) */
   binding?: Fetcher;
+  /** Universal Registry for request interception (e.g., local CLI wrappers) */
+  interceptors?: ApiMomInterceptor[];
 }
 
 export interface ApiMomContext {
@@ -53,7 +62,11 @@ export class ApiMomClient {
   private context: ApiMomContext;
 
   constructor(config: ApiMomConfig, service?: string, context?: ApiMomContext) {
-    this.config = config;
+    this.config = {
+      ...config,
+      // Deep freeze the interceptors array to prevent runtime tampering (Command Injection vector)
+      interceptors: config.interceptors ? Object.freeze([...config.interceptors]) : undefined
+    };
     this.service = service ?? null;
     this.context = context ?? {};
   }
@@ -183,6 +196,20 @@ export class ApiMomClient {
     url: string,
     init: RequestInit,
   ): Promise<ApiMomResponse<T>> {
+    // 1. Check Universal Registry (Interceptors)
+    // We check the raw endpoint, derived by stripping the config URL/binding path
+    // The service is known from this.service. The endpoint is derived for matching.
+    const urlObj = new URL(url.startsWith("https://api-mom") ? url.replace("https://api-mom", "http://localhost") : url);
+    const endpoint = urlObj.pathname.replace(`/v1/${this.service}`, "");
+
+    if (this.service && this.config.interceptors) {
+      const interceptor = this.config.interceptors.find((i) => i.match(this.service as string, endpoint, init));
+      if (interceptor) {
+        return interceptor.handle(this.service as string, endpoint, init) as Promise<ApiMomResponse<T>>;
+      }
+    }
+
+    // 2. Build Network Request
     const headers = this.buildHeaders();
 
     const request = new Request(url, {
@@ -247,7 +274,7 @@ export { checkBudget, instrumentD1, writeMetric } from "./platform.js";
  *   const mom = createApiMom(env)
  *   const gemini = mom.child('gemini', { function: 'article-write' })
  */
-export function createApiMom(env: ApiMomEnv): ApiMomClient {
+export function createApiMom(env: ApiMomEnv, interceptors?: ApiMomInterceptor[]): ApiMomClient {
   const url =
     env.API_MOM_URL ?? "https://apimom-router.apiservices.workers.dev";
   const key = env.API_MOM_KEY;
@@ -257,5 +284,5 @@ export function createApiMom(env: ApiMomEnv): ApiMomClient {
   if (!project)
     throw new Error("API_MOM_PROJECT not set — cannot create ApiMomClient");
 
-  return new ApiMomClient({ url, key, project, binding: env.API_MOM });
+  return new ApiMomClient({ url, key, project, binding: env.API_MOM, interceptors });
 }
