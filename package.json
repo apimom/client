@@ -15,22 +15,33 @@
       "types": "./dist/platform.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "format": "biome format --write ."
   },
   "peerDependencies": {
     "@cloudflare/workers-types": ">=4.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
     "@cloudflare/workers-types": "^4.20250327.0",
     "typescript": "^5.7.0"
   },
-  "keywords": ["cloudflare", "workers", "api", "sdk", "egress"],
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "api",
+    "sdk",
+    "egress"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/apimom/client.git"
-  }
+  },
+  "packageManager": "pnpm@9.0.0"
 }

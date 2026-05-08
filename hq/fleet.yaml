@@ -1,0 +1,3 @@
+name: apimom-client
+category: Core Infrastructure
+description: Client SDK for communicating with the API Mom gateway.

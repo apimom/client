@@ -1,0 +1,71 @@
+{
+  "core_purpose": "TypeScript client SDK for the API Mom unified-egress proxy, designed for Cloudflare Workers to route external API calls (Gemini, YouTube, etc.) with automatic cost attribution. Provides Pino-style chainable child clients plus platform utilities for D1 query instrumentation, Analytics Engine metrics, and pre-flight budget checks.",
+  "status": "Production-ready",
+  "architecture": {
+    "frontend": "None",
+    "backend": "Cloudflare Workers (TypeScript SDK targeting Workers runtime via service bindings or fetch)",
+    "database": "D1 (instrumented via Proxy wrapper; no schema owned by this repo)"
+  },
+  "main_features": [
+    {
+      "name": "createApiMom factory + ApiMomClient",
+      "status": "Operational",
+      "files_involved": [
+        "src/index.ts"
+      ]
+    },
+    {
+      "name": "Chainable .child(service, context) scoping with auto X-Function/X-Tags headers",
+      "status": "Operational",
+      "files_involved": [
+        "src/index.ts"
+      ]
+    },
+    {
+      "name": "Service binding support (Worker-to-Worker, avoids CF error 1042)",
+      "status": "Operational",
+      "files_involved": [
+        "src/index.ts"
+      ]
+    },
+    {
+      "name": "GET/POST proxy methods + internal route caller (/v1/budget, etc.)",
+      "status": "Operational",
+      "files_involved": [
+        "src/index.ts"
+      ]
+    },
+    {
+      "name": "Daily-limit detection on 429 daily_limit_exceeded responses",
+      "status": "Operational",
+      "files_involved": [
+        "src/index.ts"
+      ]
+    },
+    {
+      "name": "D1 instrumentation (Proxy wrapper capturing rows_read/rows_written)",
+      "status": "Operational",
+      "files_involved": [
+        "src/platform.ts"
+      ]
+    },
+    {
+      "name": "Analytics Engine metric writer",
+      "status": "Operational",
+      "files_involved": [
+        "src/platform.ts"
+      ]
+    },
+    {
+      "name": "Budget governor (checkBudget pre-flight with fail-open fallback)",
+      "status": "Operational",
+      "files_involved": [
+        "src/platform.ts"
+      ]
+    }
+  ],
+  "technical_debt": "No test suite exists (no test runner, no test files, no test script in package.json). No CI/CD workflow — `.github/` directory is absent, so publishes to npm are manual via `prepublishOnly`. README repository URL (`github.com/apimom/client.git`) does not match the actual GitHub remote, which can break npm provenance and `npm repo` links. checkBudget defaults to fail-open on errors, which is pragmatic but could mask outages of the API Mom router. `package-lock.json` was deleted in favor of `pnpm-lock.yaml` but neither change is committed yet (working tree dirty). Several `as unknown as` casts in platform.ts proxy code reflect weak typing of D1 meta responses.",
+  "active_roadmap": [
+    "Add GitHub Actions workflow for CI (typecheck/build/format) and automated npm publish on git tag — currently no CI exists and releases are fully manual (Issue: GitHub Actions: CI + npm publish on tag)"
+  ]
+}
