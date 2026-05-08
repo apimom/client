@@ -24,8 +24,16 @@ export interface ApiMomEnv {
 export interface ApiMomInterceptor {
   /** Return true to intercept this request */
   match: (service: string, endpoint: string, init: RequestInit) => boolean;
-  /** Execute the request locally/custom and return the standard ApiMomResponse */
-  handle: (service: string, endpoint: string, init: RequestInit) => Promise<ApiMomResponse>;
+	/**
+	 * Handle the intercepted request.
+	 * Can return a mocked response, call a local CLI, or delegate back to the network.
+	 */
+	handle: (
+		service: string,
+		endpoint: string,
+		init: RequestInit,
+		next: (modifiedInit: RequestInit) => Promise<ApiMomResponse<any>>
+	) => Promise<ApiMomResponse<any>>;
 }
 
 export interface ApiMomConfig {
@@ -35,7 +43,7 @@ export interface ApiMomConfig {
   /** Service binding for Worker-to-Worker (avoids CF 1042) */
   binding?: Fetcher;
   /** Universal Registry for request interception (e.g., local CLI wrappers) */
-  interceptors?: ApiMomInterceptor[];
+  interceptors?: readonly ApiMomInterceptor[];
 }
 
 export interface ApiMomContext {
@@ -196,6 +204,61 @@ export class ApiMomClient {
     url: string,
     init: RequestInit,
   ): Promise<ApiMomResponse<T>> {
+    const executeNetworkFetch = async (modifiedInit: RequestInit): Promise<ApiMomResponse<T>> => {
+      // 2. Build Network Request
+      const headers = this.buildHeaders();
+
+      // Convert Headers object to record if necessary to merge properly
+      let overrideHeaders: Record<string, string> = {};
+      if (modifiedInit.headers instanceof Headers) {
+        modifiedInit.headers.forEach((v, k) => overrideHeaders[k] = v);
+      } else {
+        overrideHeaders = (modifiedInit.headers as Record<string, string>) ?? {};
+      }
+
+      const request = new Request(url, {
+        ...modifiedInit,
+        headers: {
+          ...headers,
+          ...overrideHeaders,
+        },
+      });
+
+      const response = this.config.binding
+        ? await this.config.binding.fetch(request)
+        : await fetch(request);
+
+      let data: T;
+      try {
+        data = (await response.json()) as T;
+      } catch {
+        data = {} as T;
+      }
+
+      // Check for daily_limit_exceeded
+      if (response.status === 429) {
+        const err = data as Record<string, unknown>;
+        if (err?.error === "daily_limit_exceeded") {
+          console.error("[api-mom] daily limit exceeded", {
+            project: this.config.project,
+            service: this.service,
+            function: this.context.function,
+            spend: err.spend,
+            limit: err.limit,
+          });
+        }
+      }
+
+      return {
+        ok: response.ok,
+        status: response.status,
+        data,
+        headers: response.headers,
+        cost: response.headers.get("X-APIMom-Cost") ?? undefined,
+        cached: response.headers.get("X-APIMom-Cache") ?? undefined,
+      };
+    };
+
     // 1. Check Universal Registry (Interceptors)
     // We check the raw endpoint, derived by stripping the config URL/binding path
     // The service is known from this.service. The endpoint is derived for matching.
@@ -203,56 +266,15 @@ export class ApiMomClient {
     const endpoint = urlObj.pathname.replace(`/v1/${this.service}`, "");
 
     if (this.service && this.config.interceptors) {
-      const interceptor = this.config.interceptors.find((i) => i.match(this.service as string, endpoint, init));
+      const interceptor = this.config.interceptors.find((i) =>
+        i.match(this.service as string, endpoint, init)
+      );
       if (interceptor) {
-        return interceptor.handle(this.service as string, endpoint, init) as Promise<ApiMomResponse<T>>;
+        return interceptor.handle(this.service as string, endpoint, init, executeNetworkFetch) as Promise<ApiMomResponse<T>>;
       }
     }
 
-    // 2. Build Network Request
-    const headers = this.buildHeaders();
-
-    const request = new Request(url, {
-      ...init,
-      headers: {
-        ...headers,
-        ...((init.headers as Record<string, string>) ?? {}),
-      },
-    });
-
-    const response = this.config.binding
-      ? await this.config.binding.fetch(request)
-      : await fetch(request);
-
-    let data: T;
-    try {
-      data = (await response.json()) as T;
-    } catch {
-      data = {} as T;
-    }
-
-    // Check for daily_limit_exceeded
-    if (response.status === 429) {
-      const err = data as Record<string, unknown>;
-      if (err?.error === "daily_limit_exceeded") {
-        console.error("[api-mom] daily limit exceeded", {
-          project: this.config.project,
-          service: this.service,
-          function: this.context.function,
-          spend: err.spend,
-          limit: err.limit,
-        });
-      }
-    }
-
-    return {
-      ok: response.ok,
-      status: response.status,
-      data,
-      headers: response.headers,
-      cost: response.headers.get("X-APIMom-Cost") ?? undefined,
-      cached: response.headers.get("X-APIMom-Cache") ?? undefined,
-    };
+    return executeNetworkFetch(init);
   }
 }
 
