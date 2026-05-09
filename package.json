@@ -1,6 +1,6 @@
 {
   "name": "@apimom/client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript client SDK for API Mom — unified egress for Cloudflare Workers",
   "type": "module",
   "main": "dist/index.js",
