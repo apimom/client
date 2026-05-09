@@ -1,6 +1,6 @@
 > **Org Status**: 🟢 Active
 > **Cloudflare**: N/A
-> **Last Audited**: 2026-04-28
+> **Last Audited**: 2026-05-09
 ---
 
 # @apimom/client
@@ -13,6 +13,44 @@ TypeScript client SDK for [API Mom](https://github.com/garywu/api-mom) — unifi
 npm install @apimom/client
 ```
 
+## Architecture
+
+This SDK is the canonical fleet client for LLM inference, implementing the **Unified Inference Substrate** doctrine.
+For full context, see:
+- Substrate Audit: `_readme/architecture/audit-platform-substrate-2026-05-09.md`
+- Strategic Moves Brief: `_readme/architecture/strategic-moves-brief-2026-05-09.md`
+
+## The Interceptor Pattern
+
+Every alternative dispatch method (Cloud AI Gateway, direct fallback, local CLI, local WASM, local GGUF) is implemented as an interceptor. The interceptor pattern allows you to mock, substitute, or bypass network calls seamlessly based on the `service` and `endpoint`.
+
+The canonical example is the local Gemini CLI interceptor, which intercepts calls meant for Gemini and routes them to a local subprocess:
+
+```typescript
+import { createApiMom } from "@apimom/client";
+import { execFile } from "node:child_process";
+
+const mom = createApiMom(env, [
+  async (req, next) => {
+    // Intercept Gemini calls in local dev
+    if (req.service === "gemini" && process.env.NODE_ENV === "development") {
+      // route to local subprocess...
+      return { ok: true, data: { ... }, cost: "0.00 (Local)", headers: new Headers() };
+    }
+    // Fall through to real network
+    return next(req);
+  }
+]);
+```
+
+## Uniform Contract
+
+All calls share a uniform request and response shape, regardless of whether they hit the network or a local interceptor:
+- **Request**: `{ service, endpoint, payload, init }`
+- **Response**: `{ ok, data, cost, headers }`
+
+**Cost Convention**: For local/free interceptors, the `cost` field must return exactly `"0.00 (Local)"` to maintain a uniform cost ledger while preserving reality.
+
 ## Usage
 
 ```typescript
@@ -22,14 +60,6 @@ const mom = createApiMom(env);
 const child = mom.child('gemini', { function: 'generate' });
 const result = await child.post('/gemini-2.0-flash:generateContent', { contents: [...] });
 ```
-
-## Features
-
-- Chainable `.child(service, context)` scoping (like Pino logger)
-- Auto cost attribution via `X-Function` and `X-Tags` headers
-- Service binding support (Worker-to-Worker, avoids CF error 1042)
-- Budget checks and daily limit enforcement
-- D1 instrumentation and Analytics Engine metrics
 
 ## Platform Utilities
 
