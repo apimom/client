@@ -1,6 +1,6 @@
 {
   "name": "@apimom/client",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "TypeScript client SDK for API Mom — unified egress for Cloudflare Workers",
   "type": "module",
   "main": "dist/index.js",
@@ -13,8 +13,11 @@
       "types": "./dist/index.d.ts"
     },
     "./platform": {
-      "import": "./dist/platform.js",
-      "types": "./dist/platform.d.ts"
+      "import": "./dist/platform.js"
+    },
+    "./dev-env": {
+      "import": "./dist/presets/dev-env.js",
+      "types": "./dist/presets/dev-env.d.ts"
     }
   },
   "files": [
@@ -34,6 +37,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
     "@cloudflare/workers-types": "^4.20250327.0",
+    "@types/node": "^25.6.2",
     "typescript": "^5.7.0"
   },
   "keywords": [
