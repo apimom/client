@@ -14,6 +14,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250327.0
         version: 4.20260504.1
+      '@types/node':
+        specifier: ^25.6.2
+        version: 25.6.2
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -76,10 +79,16 @@ packages:
   '@cloudflare/workers-types@4.20260504.1':
     resolution: {integrity: sha512-x/7BzBXSGBQS0wHdaY0/1bcaRszkkhCjTc5maQvNSHu/pTVdBF2f/L41W8pRSJJSbLL80ynW7O923O7v3PaLtg==}
 
+  '@types/node@25.6.2':
+    resolution: {integrity: sha512-sokuT28dxf9JT5Kady1fsXOvI4HVpjZa95NKT5y9PNTIrs2AsobR4GFAA90ZG8M+nxVRLysCXsVj6eGC7Vbrlw==}
+
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  undici-types@7.19.2:
+    resolution: {integrity: sha512-qYVnV5OEm2AW8cJMCpdV20CDyaN3g0AjDlOGf1OW4iaDEx8MwdtChUp4zu4H0VP3nDRF/8RKWH+IPp9uW0YGZg==}
 
 snapshots:
 
@@ -120,4 +129,10 @@ snapshots:
 
   '@cloudflare/workers-types@4.20260504.1': {}
 
+  '@types/node@25.6.2':
+    dependencies:
+      undici-types: 7.19.2
+
   typescript@5.9.3: {}
+
+  undici-types@7.19.2: {}

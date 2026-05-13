@@ -67,6 +67,24 @@ const result = await child.post('/gemini-2.0-flash:generateContent', { contents:
 import { checkBudget, instrumentD1, writeMetric } from '@apimom/client/platform';
 ```
 
+## Local-first dev
+
+Based on the `feedback_local_first_for_ai_experiments.md` doctrine, you can easily opt your fleet repo into using local, zero-cost inference during development by including the `devEnvPreset`:
+
+```typescript
+import { createApiMom } from "@apimom/client";
+import { devEnvPreset } from "@apimom/client/dev-env";
+
+const mom = createApiMom(env, [
+  ...devEnvPreset({ enabledIn: ["development"] })
+]);
+```
+
+By default, this preset automatically handles:
+- **Gemini**: Subprocesses to `gemini` CLI.
+- **Anthropic**: Subprocesses to `claude` CLI.
+- **Embeddings**: Proxies to local `llama-server`. Ensure you have started it, for example: `llama-server -m ~/.cache/qmd/models/hf_ggml-org_embeddinggemma-300M-Q8_0.gguf`.
+
 ## License
 
 MIT
