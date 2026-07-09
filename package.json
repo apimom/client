@@ -36,9 +36,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
-    "@cloudflare/workers-types": "^4.20250327.0",
+    "@cloudflare/workers-types": "^5.20260708.1",
     "@types/node": "^26.1.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "keywords": [
     "cloudflare",
